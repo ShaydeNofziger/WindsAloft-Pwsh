@@ -13,9 +13,31 @@ function Open-WindsAloft {
 
     $DropZone = $DropZoneList | Where-Object { $_.DropZoneName -eq $DropZoneName }
 
-    $Url = $UrlTemplate -replace '{LAT}', $DropZone.DropZoneLat -replace '{LON}', $DropZone.DropZoneLong
+    $Url = $UrlTemplate -replace '{LAT}', $DropZone.DropZoneLatitude -replace '{LON}', $DropZone.DropZoneLongitude
 
     Start-Process -FilePath $Url
+}
+
+function Get-WindsAloftUriForDropZone {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [PSCustomObject[]] $DropZone
+    )
+
+    begin {
+        $UrlTemplate = 'https://windsaloft.us/?lat={LAT}&lon={LON}'
+    }
+
+    process {
+        foreach($dz in $DropZone) {
+            $Url = $UrlTemplate -replace '{LAT}', $dz.DropZoneLatitude -replace '{LON}', $dz.DropZoneLongitude
+
+            Write-Output $Url
+        }
+    }
+
+    end {}
 }
 
 function Get-WindsAloftDropZoneList {
@@ -68,4 +90,29 @@ function Get-WindsAloftData {
 
     end {}
 
+}
+
+function Export-WindsAloftDropZoneHtml {
+    [CmdletBinding()]
+    param()
+
+    begin {}
+
+    process {
+        $AllDropZones = Get-WindsAloftDropZoneList
+
+        $HtmlString = '<html><body>'
+        
+        foreach($dz in $AllDropZones) {
+            $AnchorTagTemplate = '<a href="{URL}">{NAME}</a><br>'
+            $AnchorTag = $AnchorTagTemplate -replace '{URL}', (Get-WindsAloftUriForDropZone -DropZone $dz) -replace '{NAME}', $dz.DropZoneName
+            $HtmlString += $AnchorTag
+        }
+        
+        $HtmlString += '</body></html>'
+        
+        $HtmlString | Out-File -FilePath "$PSScriptRoot\windsaloft.html" -Encoding utf8 -Force
+    }
+
+    end {}
 }
