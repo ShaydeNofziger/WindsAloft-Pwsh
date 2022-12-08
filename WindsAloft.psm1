@@ -41,19 +41,31 @@ function Get-WindsAloftUriForDropZone {
 }
 
 function Get-WindsAloftDropZoneList {
-    if ($null -eq $Global:WindsAloftDropZoneList) {
-        $result = Invoke-RestMethod -Method Get -Uri 'https://windsaloft.us/dropzones.geojson'
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [switch] $Force
+    )
 
-        $Global:WindsAloftDropZoneList = $result.features | ForEach-Object {
-            [PSCustomObject]@{
-                DropZoneName = $_.properties.Name
-                DropZoneLongitude = $_.geometry.coordinates[0]
-                DropZoneLatitude = $_.geometry.coordinates[1]
-            }
+    begin {}
+
+    process {
+        if ($Force.IsPresent -or ($null -eq $Global:WindsAloftDropZoneList)) {
+            $result = Invoke-RestMethod -Method Get -Uri 'https://windsaloft.us/dropzones.geojson'
+    
+            $Global:WindsAloftDropZoneList = $result.features | ForEach-Object {
+                [PSCustomObject]@{
+                    DropZoneName = $_.properties.Name
+                    DropZoneLongitude = $_.geometry.coordinates[0]
+                    DropZoneLatitude = $_.geometry.coordinates[1]
+                }
+            } | Sort-Object -Property DropZoneName
         }
+    
+        Write-Output $Global:WindsAloftDropZoneList
     }
 
-    Write-Output $Global:WindsAloftDropZoneList
+    end {}
 
 }
 
@@ -99,19 +111,42 @@ function Export-WindsAloftDropZoneHtml {
     begin {}
 
     process {
-        $AllDropZones = Get-WindsAloftDropZoneList
+        $AllDropZones = Get-WindsAloftDropZoneList -Force
 
-        $HtmlString = '<html><body>'
+        $HtmlString = "<html><body><h1>Winds Aloft Drop Zones</h1><ul>`r`n"
         
         foreach($dz in $AllDropZones) {
-            $AnchorTagTemplate = '<a href="{URL}">{NAME}</a><br>'
+            $AnchorTagTemplate = '<li><a href="{URL}">{NAME}</a></li>'
             $AnchorTag = $AnchorTagTemplate -replace '{URL}', (Get-WindsAloftUriForDropZone -DropZone $dz) -replace '{NAME}', $dz.DropZoneName
-            $HtmlString += $AnchorTag
+            $HtmlString += "`r`n$AnchorTag"
         }
         
         $HtmlString += '</body></html>'
         
         $HtmlString | Out-File -FilePath "$PSScriptRoot\windsaloft.html" -Encoding utf8 -Force
+    }
+
+    end {}
+}
+
+function Export-WindsAloftDropZoneMarkdown {
+    [CmdletBinding()]
+    param()
+
+    begin {}
+
+    process {
+        $AllDropZones = Get-WindsAloftDropZoneList -Force
+
+        $MarkdownString = '# Winds Aloft Drop Zones'
+
+        foreach($dz in $AllDropZones) {
+            $AnchorTagTemplate = '-  [{NAME}]({URL})'
+            $AnchorTag = $AnchorTagTemplate -replace '{URL}', (Get-WindsAloftUriForDropZone -DropZone $dz) -replace '{NAME}', $dz.DropZoneName
+            $MarkdownString += "`r`n$AnchorTag"
+        }
+
+        $MarkdownString | Out-File -FilePath "$PSScriptRoot\windsaloft.md" -Encoding utf8 -Force
     }
 
     end {}
