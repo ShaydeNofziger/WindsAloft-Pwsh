@@ -1,4 +1,22 @@
 $Global:WindsAloftDropZoneList = $null
+$Global:WindsAloftBaseUrl = 'https://windsaloft.us'
+
+function Switch-WindsAloftBaseUrl {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('https://windsaloft.us', 'https://markschulze.net/winds')]
+        [string] $BaseUrl
+    )
+
+    begin {}
+
+    process {
+        Set-Variable -Name 'WindsAloftBaseUrl' -Value $BaseUrl -Scope 'Global'
+    }
+
+    end {}
+}
 
 function Open-WindsAloft {
     [CmdletBinding()]
@@ -7,7 +25,7 @@ function Open-WindsAloft {
         [ValidateNotNullOrEmpty()]
         [string] $DropZoneName
         )
-    $UrlTemplate = 'https://windsaloft.us/?lat={LAT}&lon={LON}'
+    $UrlTemplate = "$Global:WindsAloftBaseUrl/?lat={LAT}&lon={LON}"
 
     $DropZoneList = Get-WindsAloftDropZoneList
 
@@ -26,7 +44,7 @@ function Get-WindsAloftUriForDropZone {
     )
 
     begin {
-        $UrlTemplate = 'https://windsaloft.us/?lat={LAT}&lon={LON}'
+        $UrlTemplate = "$Global:WindsAloftBaseUrl/?lat={LAT}&lon={LON}"
     }
 
     process {
@@ -51,7 +69,7 @@ function Get-WindsAloftDropZoneList {
 
     process {
         if ($Force.IsPresent -or ($null -eq $Global:WindsAloftDropZoneList)) {
-            $result = Invoke-RestMethod -Method Get -Uri 'https://windsaloft.us/dropzones.geojson'
+            $result = Invoke-RestMethod -Method Get -Uri "$Global:WindsAloftBaseUrl/dropzones.geojson"
     
             $Global:WindsAloftDropZoneList = $result.features | ForEach-Object {
                 [PSCustomObject]@{
@@ -94,7 +112,7 @@ function Get-WindsAloftData {
 
     process {
         foreach ($dz in $DropZone) {
-            $Url = "https://windsaloft.us/winds.php?lat=$($dz.DropZoneLatitude)&lon=$($dz.DropZoneLongitude)&hourOffset=0&referrer=$Referer"
+            $Url = "$Global:WindsAloftBaseUrl/winds.php?lat=$($dz.DropZoneLatitude)&lon=$($dz.DropZoneLongitude)&hourOffset=0&referrer=$Referer"
 
             Invoke-RestMethod -Method Get -Uri $Url
         }
