@@ -21,7 +21,7 @@ function Open-WindsAloft {
 function Get-WindsAloftDropZoneList {
     if ($null -eq $Global:WindsAloftDropZoneList) {
         $result = Invoke-RestMethod -Method Get -Uri 'https://windsaloft.us/dropzones.geojson'
-    
+
         $Global:WindsAloftDropZoneList = $result.features | ForEach-Object {
             [PSCustomObject]@{
                 DropZoneName = $_.properties.Name
@@ -49,18 +49,23 @@ function Get-WindsAloftDropZone {
 function Get-WindsAloftData {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [ValidateNotNullOrEmpty()]
-        [string] $DropZoneLatitude,
-
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [ValidateNotNullOrEmpty()]
-        [string] $DropZoneLongitude
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [ValidateNotNull()]
+        [PSCustomObject[]] $DropZone
     )
 
-    $Referer = 'SHAYDE'
+    begin {
+        $Referer = 'SHAYDE'
+    }
 
-    $Url = "https://windsaloft.us/winds.php?lat=$DropZoneLatitude&lon=$DropZoneLongitude&hourOffset=0&referrer=$Referer"
+    process {
+        foreach ($dz in $DropZone) {
+            $Url = "https://windsaloft.us/winds.php?lat=$($dz.DropZoneLatitude)&lon=$($dz.DropZoneLongitude)&hourOffset=0&referrer=$Referer"
 
-    Invoke-RestMethod -Method Get -Uri $Url
+            Invoke-RestMethod -Method Get -Uri $Url
+        }
+    }
+
+    end {}
+
 }
